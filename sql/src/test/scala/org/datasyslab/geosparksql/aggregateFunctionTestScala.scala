@@ -60,5 +60,27 @@ class aggregateFunctionTestScala extends TestBaseScala {
       var union = sparkSession.sql("select ST_Union_Aggr(polygondf.polygonshape) from polygondf")
       assert(union.take(1)(0).get(0).asInstanceOf[Geometry].getArea == 10100)
     }
+	
+	it("Passed ST_ConvexHull_aggr") {
+
+      var polygonWktDf = sparkSession.read.format("csv").option("delimiter", "\t").option("header", "false").load(testConvexHullFile)
+      polygonWktDf.createOrReplaceTempView("polygontable")
+      polygonWktDf.show()
+      var polygonDf = sparkSession.sql("select ST_GeomFromWKT(polygontable._c0) as countyshape from polygontable")
+      polygonDf.createOrReplaceTempView("polygondf")
+      polygonDf.show()
+      var functionDf = sparkSession.sql("select ST_ConvexHull(polygondf.countyshape) from polygondf")
+      functionDf.show()
+	  
+	  
+	  var polygonAggrWktDf = sparkSession.read.format("csv").option("delimiter", "\t").option("header", "false").load(testConvexHullAggrFile)
+      polygonAggrWktDf.createOrReplaceTempView("polygonAggrtable")
+      polygonAggrWktDf.show()
+      var polygonAggrDf = sparkSession.sql("select ST_GeomFromWKT(polygonAggrtable._c0) as countyshape from polygonAggrtable")
+      polygonAggrDf.createOrReplaceTempView("polygonAggrDf")
+      polygonAggrDf.show()
+      var functionAggrDf = sparkSession.sql("select ST_ConvexHull_Aggr(polygonAggrDf.countyshape) from polygonAggrDf")
+      functionAggrDf.show()
+    }
   }
 }

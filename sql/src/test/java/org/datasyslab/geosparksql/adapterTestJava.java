@@ -61,6 +61,8 @@ public class adapterTestJava
     public static String mixedWkbGeometryInputLocation = resourceFolder + "county_small_wkb.tsv";
     public static String csvPointInputLocation = resourceFolder + "arealm.csv";
     public static String shapefileInputLocation = resourceFolder + "shapefiles/polygon";
+	public static String testConvexHullFile = resourceFolder + "testConvexHull.tsv";
+	public static String testConvexHullAggrFile = resourceFolder + "testConvexHullAggr.tsv";
 
     /**
      * Once executed before all.

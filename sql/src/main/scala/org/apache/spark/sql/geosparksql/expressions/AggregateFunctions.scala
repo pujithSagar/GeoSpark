@@ -182,3 +182,69 @@ class ST_Envelope_Aggr extends UserDefinedAggregateFunction {
     return buffer.getAs[Geometry](0)
   }
 }
+
+
+/**
+  * Return the envelope boundary of the entire column
+  */
+class ST_ConvexHull_Aggr extends UserDefinedAggregateFunction {
+  // This is the input fields for your aggregate function.
+  override def inputSchema: org.apache.spark.sql.types.StructType =
+    StructType(StructField("ConvexHull", new GeometryUDT) :: Nil)
+
+  // This is the internal fields you keep for computing your aggregate.
+  override def bufferSchema: StructType = StructType(
+	StructField("ConvexHull", new GeometryUDT) ::
+    StructField("Flag", BooleanType, true) :: Nil
+  )
+
+  // This is the output type of your aggregatation function.
+  override def dataType: DataType = new GeometryUDT
+
+  override def deterministic: Boolean = true
+
+  // This is the initial value for your buffer schema.
+  override def initialize(buffer: MutableAggregationBuffer): Unit = {
+    val coordinates: Array[Coordinate] = new Array[Coordinate](5)
+    coordinates(0) = new Coordinate(-999999999, -999999999)
+    coordinates(1) = new Coordinate(-999999999, -999999999)
+    coordinates(2) = new Coordinate(-999999999, -999999999)
+    coordinates(3) = new Coordinate(-999999999, -999999999)
+    coordinates(4) = new Coordinate(-999999999, -999999999)
+    val geometryFactory = new GeometryFactory()
+    buffer(0) = geometryFactory.createPolygon(coordinates)
+	buffer(1) = true
+  }
+
+  // This is how to update your buffer schema given an input.
+  override def update(buffer: MutableAggregationBuffer, input: Row): Unit = {
+    val accumulateConvexHullGeo = buffer.getAs[Geometry](0)
+    val newGeometry = input.getAs[Geometry](0)	
+	if (buffer.getAs[Boolean](1) == true) {
+		accumulateConvexHullGeo = newGeometry
+		buffer(0) = newGeometry.convexHull
+		buffer(1) = false
+	} else {
+		buffer(0) = new GeometryFactory().createPolygon(accumulateConvexHullGeo.getCoordinates ++ newGeometry.getCoordinates).convexHull
+	}
+  }
+
+  // This is how to merge two objects with the bufferSchema type.
+  override def merge(buffer1: MutableAggregationBuffer, buffer2: Row): Unit = {
+    val leftConvexHull = buffer1.getAs[Geometry](0)
+    val rightConvexHull = buffer2.getAs[Geometry](0)
+	
+	if (leftConvexHull.getAs[Boolean](1) == true || rightConvexHull.getAs[Boolean](1) == true) {
+		leftConvexHull = rightConvexHull
+		buffer1(0) = leftConvexHull.convexHull;		
+	} else{
+		buffer1(0) = new GeometryFactory().createPolygon(leftConvexHull.getCoordinates ++ rightConvexHull.getCoordinates).convexHull
+	}
+	buffer1(1) = false
+  }
+
+  // This is where you output the final value, given the final value of your bufferSchema.
+  override def evaluate(buffer: Row): Any = {
+    return buffer.getAs[Geometry](0)
+  }
+}
